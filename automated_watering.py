@@ -56,7 +56,7 @@ class Waterer:
     }
     
     # Settings file
-    settings_file = 'settings.json'
+    default_settings_file = 'settings.json'
     
     # Default log file (replaces 'log_file')
     default_log_file = 'waterer.log'
@@ -68,7 +68,8 @@ class Waterer:
     default_watering_days = ['Wednesday', 'Saturday']
     
     def __init__(self, overwrite_log = True):
-        self.log_file = Waterer.default_log_file
+        self.log_file      = Waterer.default_log_file
+        self.settings_file = Waterer.default_settings_file
         self.read_settings()
 
         now = datetime.datetime.today()
@@ -94,11 +95,11 @@ class Waterer:
         '''
         try:
             # Remove old settings file
-            subprocess.run( ['rm', Waterer.settings_file] )
+            subprocess.run( ['rm', self.settings_file] )
 
             # Download new settings file off GitHub
-            subprocess.run( ['wget', 'https://raw.githubusercontent.com/wshand/rpi-watering/master/' + Waterer.settings_file] )
-            with open(Waterer.settings_file, 'r') as f:
+            subprocess.run( ['wget', 'https://raw.githubusercontent.com/wshand/rpi-watering/master/' + self.settings_file] )
+            with open(self.settings_file, 'r') as f:
                 settings = json.load(f)
             self.watering_time = datetime.timedelta(seconds=int(settings['watering_time']))
 
@@ -112,7 +113,7 @@ class Waterer:
 
             with open(self.log_file, 'a') as f:
                 f.write( get_timestamp() + str(ex) + '\n' )
-                f.write( get_timestamp() + 'Unable to read ' + Waterer.settings_file + '; using defaults\n' )
+                f.write( get_timestamp() + 'Unable to read ' + self.settings_file + '; using defaults\n' )
 
     def water_loop(self):
         '''
