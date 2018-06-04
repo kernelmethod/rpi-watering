@@ -32,7 +32,7 @@ GPIO.output(24, GPIO.LOW)
 
 def signal_handler(signal, frame):
     GPIO.cleanup()
-    with open(Waterer.default_log_file, 'a') as f:
+    with open(Waterer.log_file, 'a') as f:
         f.write( '[' + str(datetime.datetime.now()) + '] Quit\n' )
     sys.exit(0)
 
@@ -56,27 +56,28 @@ class Waterer:
     }
     
     # Settings file
-    default_settings_file = 'settings.json'
+    settings_file = 'settings.json'
     
-    # Default log file (replaces 'log_file')
-    default_log_file = 'waterer.log'
+    # Log file
+    log_file = 'waterer.log'
 
     # Default seconds to spend watering (replaces 'watering_time')
     default_watering_time = datetime.timedelta(seconds=8)
 
     # Default days of the week to water
-    default_watering_days = ['Wednesday', 'Saturday']
-    
+    default_watering_days = ['Tuesday', 'Saturday']
+
+    # Default hour at which to water the plant
+    default_watering_hour = 12
+
     def __init__(self, overwrite_log = True):
-        self.log_file      = Waterer.default_log_file
-        self.settings_file = Waterer.default_settings_file
         self.read_settings()
 
         now = datetime.datetime.today()
-        self.date = self.get_next_watering_date(datetime.datetime(now.year, now.month, now.day, 12))
+        self.date = self.get_next_watering_date(datetime.datetime(now.year, now.month, now.day, now.hour))
 
         if overwrite_log:
-            with open(self.log_file, 'w') as f: pass
+            with open(Waterer.log_file, 'w') as f: pass
 
     def get_next_watering_date(self, date):
         '''
@@ -84,10 +85,10 @@ class Waterer:
         '''
         # Get the day that is closest to now
         ts = [Waterer.weekdays[d] for d in self.watering_days]
-        delta = min([t - date.weekday() + 7 * (date.weekday() >= t and date.hour >= 12) for t in ts])
+        delta = min([t - date.weekday() + 7 * (date.weekday() >= t and date.hour >= self.watering_hour) for t in ts])
 
         # Return date object corresponding to the closest day
-        return datetime.datetime(date.year, date.month, date.day, 12) + datetime.timedelta(days=delta)
+        return datetime.datetime(date.year, date.month, date.day, self.watering_hour) + datetime.timedelta(days=delta)
 
     def read_settings(self):
         '''
@@ -98,10 +99,16 @@ class Waterer:
             subprocess.run( ['rm', self.settings_file] )
 
             # Download new settings file off GitHub
-            subprocess.run( ['wget', 'https://raw.githubusercontent.com/wshand/rpi-watering/master/' + self.settings_file] )
-            with open(self.settings_file, 'r') as f:
+            subprocess.run( ['wget', 'https://raw.githubusercontent.com/wshand/rpi-watering/master/' + Waterer.settings_file] )
+            with open(Waterer.settings_file, 'r') as f:
                 settings = json.load(f)
+
+            # Amount of time to water the plant
             self.watering_time = datetime.timedelta(seconds=int(settings['watering_time']))
+
+            # Hour at which to water the plant
+            self.watering_hour = int(settings['watering_hour'])
+            assert 0 <= self.watering_hour <= 23
 
             # Parse the days on which the plant should be watered
             self.watering_days = settings['watering_days'].lower().replace(' ', '').split(',')
@@ -110,17 +117,18 @@ class Waterer:
             # Set everything to the default; write error to the default log file
             self.watering_time = Waterer.default_watering_time
             self.days          = Waterer.default_days
+            self.watering_hour = Waterer.default_watering_hour
 
-            with open(self.log_file, 'a') as f:
+            with open(Waterer.log_file, 'a') as f:
                 f.write( get_timestamp() + str(ex) + '\n' )
-                f.write( get_timestamp() + 'Unable to read ' + self.settings_file + '; using defaults\n' )
+                f.write( get_timestamp() + 'Unable to read ' + Waterer.settings_file + '; using defaults\n' )
 
     def water_loop(self):
         '''
         Controls the plant watering system.
         '''
         # Write initial message for starting the watering loop
-        with open(self.log_file, 'a') as f:
+        with open(Waterer.log_file, 'a') as f:
             f.write( get_timestamp() + 'Started; process PID is ' + str(os.getpid()) + '\n' )
 
             # Start watering loop
