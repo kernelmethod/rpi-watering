@@ -93,8 +93,11 @@ class Waterer:
         Reads the settings file to set environment variables.
         '''
         try:
-            # Download settings file off GitHub
-            subprocess.run( ['wget', 'https://raw.githubusercontent.com/wshand/rpi-watering/master/settings.json'] )        
+            # Remove old settings file
+            subprocess.run( ['rm', Waterer.settings_file] )
+
+            # Download new settings file off GitHub
+            subprocess.run( ['wget', 'https://raw.githubusercontent.com/wshand/rpi-watering/master/' + Waterer.settings_file] )
             with open(Waterer.settings_file, 'r') as f:
                 settings = json.load(f)
             self.watering_time = datetime.timedelta(seconds=int(settings['watering_time']))
