@@ -1,4 +1,5 @@
 {
     "watering_time": 5,
-    "watering_days": "Monday, Friday"
+    "watering_days": "Monday, Friday",
+	"watering_hour": 12
 }
