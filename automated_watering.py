@@ -74,15 +74,17 @@ class Waterer:
         self.read_settings()
 
         now = datetime.datetime.today()
-        self.date = self.get_next_watering_date(datetime.datetime(now.year, now.month, now.day, now.hour))
+        self.date = self.get_next_watering_date()
 
         if overwrite_log:
             with open(Waterer.log_file, 'w') as f: pass
 
-    def get_next_watering_date(self, date):
+    def get_next_watering_date(self):
         '''
         Returns the next date that the plant should be watered on
         '''
+        date = datetime.datetime.now()
+        
         # Get the day that is closest to now
         ts = [Waterer.weekdays[d] for d in self.watering_days]
         delta = min([t - date.weekday() + 7 * (date.weekday() >= t and date.hour >= self.watering_hour) for t in ts])
@@ -133,7 +135,7 @@ class Waterer:
 
             # Start watering loop
             while True:
-                self.date = self.get_next_watering_date(datetime.datetime.now())
+                self.date = self.get_next_watering_date()
                 f.write( get_timestamp() + 'Next session on ' +
                          calendar.day_name[self.date.weekday()] + ' ' + str(self.date) + '\n' )
                 f.flush(); os.fsync(f.fileno())
