@@ -1,9 +1,7 @@
 #!/usr/bin/python3
 
 '''
-Test the IOT relay. (https://www.iotrelay.com)
-
-GPIO setup:
+GPIO connected to IOT relay. (https://www.iotrelay.com)
 - GPIO24 (pin 18) to relay +
 - GND (pin 20) to relay -
 
@@ -14,6 +12,10 @@ this is the only job being run; otherwise, change the %1):
 $ disown -h %1
 $ bg %1
 $ logout
+
+The best way to kill the process is to run 'kill -s SIGINT <pid>', since the code below
+can handle this signal to exit gracefully. You can find the process ID in the first line
+of the log file, or by running 'ps -x | grep python'.
 '''
 
 import sys, os, subprocess
@@ -142,14 +144,6 @@ class Waterer:
 '''
 MAIN SCRIPT
 '''
-# Set the date to start watering - precisely 12pm (noon)
-d = datetime.datetime.today()
-start = datetime.datetime(d.year, d.month, d.day, 12)
-
-if d.hour >= 12:
-    # Start watering tomorrow
-    start += datetime.timedelta(days=1)
-    
 # Create the bot
 bot = Waterer()
 
@@ -158,8 +152,7 @@ try:
     bot.water_loop()
 except Exception as ex:
     with open(Waterer.default_log_file, 'a') as f:
+        f.write( get_timestamp() + str(ex) + '\n' )
         f.write( get_timestamp() + 'Error; exiting.\n' )
-        f.write( str(ex) )
     GPIO.cleanup()
     raise ex
-
