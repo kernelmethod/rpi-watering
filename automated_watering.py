@@ -165,7 +165,7 @@ bot = Waterer()
 try:
     bot.water_loop()
 except Exception as ex:
-    with open(Waterer.default_log_file, 'a') as f:
+    with open(Waterer.log_file, 'a') as f:
         f.write( get_timestamp() + str(ex) + '\n' )
         f.write( get_timestamp() + 'Error; exiting.\n' )
     GPIO.cleanup()
