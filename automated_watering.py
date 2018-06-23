@@ -125,6 +125,26 @@ class Waterer:
                 f.write( get_timestamp() + str(ex) + '\n' )
                 f.write( get_timestamp() + 'Unable to read ' + Waterer.settings_file + '; using defaults\n' )
 
+    def water_plant(self, pause_func):
+        '''
+        Initiates watering session.
+
+        :param pause_func: a function that, when called, will cause the function to pause for an appropriate
+           period of time.
+        '''
+        # Update the settings
+        self.read_settings()
+        
+        with open(Waterer.log_file, 'a') as f:
+            # Start watering
+            GPIO.output(24, GPIO.HIGH)
+            f.write( get_timestamp() + 'Started watering at ' + str(datetime.datetime.today()) + '; ' )
+            pause_func()
+
+            # Stop watering
+            GPIO.output(24, GPIO.LOW)
+            f.write( 'stopped at ' + str(datetime.datetime.today()) + '\n' )
+
     def water_loop(self):
         '''
         Controls the plant watering system.
@@ -143,30 +163,40 @@ class Waterer:
                 # Wait until we're ready to water the plant
                 pause.until(self.date)
 
-                # Update the settings
-                self.read_settings()
-            
-                # Start watering
-                GPIO.output(24, GPIO.HIGH)
-                f.write( get_timestamp() + 'Started watering at ' + str(datetime.datetime.today()) + '; ' )
-                pause.until(datetime.datetime.today() + self.watering_time)
-
-                # Stop watering
-                GPIO.output(24, GPIO.LOW)
-                f.write( 'stopped at ' + str(datetime.datetime.today()) + '\n' )
-
+                # Water the plant
+                self.water_plant(lambda: pause.until(datetime.datetime.today() + self.watering_time))
+                
 '''
 MAIN SCRIPT
 '''
-# Create the bot
-bot = Waterer()
+if __name__=="__main__":
+    # Create the bot
+    bot = Waterer(overwrite_log=False)
+    
+    # Ask whether the user would prefer to water now, or whether they'd like to run the watering loop
+    print( 'Run one-time watering session, or watering loop?' )
+    print( '\t1: one-time watering session' )
+    print( '\t2: watering loop' )
+    choice = input( 'Enter choice: ' )
 
-# Initiate the watering loop. If there's an error, output it to the error log
-try:
-    bot.water_loop()
-except Exception as ex:
-    with open(Waterer.log_file, 'a') as f:
-        f.write( get_timestamp() + str(ex) + '\n' )
-        f.write( get_timestamp() + 'Error; exiting.\n' )
-    GPIO.cleanup()
-    raise ex
+    if choice == '1':
+        bot.water_plant( input('Press enter to stop watering...') )
+        print( 'Exiting...' )
+
+    elif choice == '2':
+        print( 'Running watering loop...' )
+        
+        # Initiate the watering loop. If there's an error, output it to the error log
+        try:
+            bot.water_loop()
+        except Exception as ex:
+            with open(Waterer.log_file, 'a') as f:
+                f.write( get_timestamp() + str(ex) + '\n' )
+                f.write( get_timestamp() + 'Error; exiting.\n' )
+                GPIO.cleanup()
+            raise ex
+
+    else:
+        print( 'Exiting...' )
+
+    GPIO.clean()
