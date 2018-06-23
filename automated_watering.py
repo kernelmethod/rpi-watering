@@ -25,6 +25,8 @@ import RPi.GPIO as GPIO
 import signal
 import json
 
+WATERING_REPOSITORY = 'https://raw.githubusercontent.com/wshand/rpi-watering/master/'
+
 # Set up GPIO using BCM numbering
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(24, GPIO.OUT)
@@ -101,7 +103,7 @@ class Waterer:
             subprocess.run( ['rm', self.settings_file] )
 
             # Download new settings file off GitHub
-            subprocess.run( ['wget', 'https://raw.githubusercontent.com/wshand/rpi-watering/master/' + Waterer.settings_file] )
+            subprocess.run( ['wget',  + Waterer.settings_file, '/dev/null'] )
             with open(Waterer.settings_file, 'r') as f:
                 settings = json.load(f)
 
@@ -132,7 +134,6 @@ class Waterer:
         :param pause_func: a function that, when called, will cause the function to pause for an appropriate
            period of time.
         '''
-        # Update the settings
         self.read_settings()
         
         with open(Waterer.log_file, 'a') as f:
@@ -199,4 +200,5 @@ if __name__=="__main__":
     else:
         print( 'Exiting...' )
 
-    GPIO.clean()
+    GPIO.output(GPIO.LOW)
+    GPIO.cleanup()
