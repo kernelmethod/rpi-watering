@@ -78,8 +78,9 @@ class Waterer:
         now = datetime.datetime.today()
         self.date = self.get_next_watering_date()
 
-        if overwrite_log:
-            with open(Waterer.log_file, 'w') as f: pass
+        with open(Waterer.log_file, 'w' if overwrite_log else 'a') as f:
+            f.write( get_timestamp() + 'Started; process PID is ' + str(os.getpid()) + '\n' )
+
 
     def get_next_watering_date(self):
         '''
@@ -100,10 +101,10 @@ class Waterer:
         '''
         try:
             # Remove old settings file
-            subprocess.run( ['rm', self.settings_file] )
+            subprocess.run( ['rm', '-f', self.settings_file] )
 
             # Download new settings file off GitHub
-            subprocess.run( ['wget',  + Waterer.settings_file, '/dev/null'] )
+            subprocess.run( ['wget', WATERING_REPOSITORY + Waterer.settings_file] )
             with open(Waterer.settings_file, 'r') as f:
                 settings = json.load(f)
 
@@ -150,22 +151,19 @@ class Waterer:
         '''
         Controls the plant watering system.
         '''
-        # Write initial message for starting the watering loop
-        with open(Waterer.log_file, 'a') as f:
-            f.write( get_timestamp() + 'Started; process PID is ' + str(os.getpid()) + '\n' )
-
-            # Start watering loop
-            while True:
+        # Start watering loop
+        while True:
+            with open(Waterer.log_file, 'a') as f:
                 self.date = self.get_next_watering_date()
                 f.write( get_timestamp() + 'Next session on ' +
                          calendar.day_name[self.date.weekday()] + ' ' + str(self.date) + '\n' )
                 f.flush(); os.fsync(f.fileno())
                 
-                # Wait until we're ready to water the plant
-                pause.until(self.date)
+            # Wait until we're ready to water the plant
+            pause.until(self.date)
 
-                # Water the plant
-                self.water_plant(lambda: pause.until(datetime.datetime.today() + self.watering_time))
+            # Water the plant
+            self.water_plant(lambda: pause.until(datetime.datetime.today() + self.watering_time))
                 
 '''
 MAIN SCRIPT
@@ -181,7 +179,7 @@ if __name__=="__main__":
     choice = input( 'Enter choice: ' )
 
     if choice == '1':
-        bot.water_plant( input('Press enter to stop watering...') )
+        bot.water_plant( lambda: input('Press enter to stop watering...') )
         print( 'Exiting...' )
 
     elif choice == '2':
@@ -200,5 +198,5 @@ if __name__=="__main__":
     else:
         print( 'Exiting...' )
 
-    GPIO.output(GPIO.LOW)
+    GPIO.output(24, GPIO.LOW)
     GPIO.cleanup()
